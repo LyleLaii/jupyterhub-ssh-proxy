@@ -1,0 +1,13 @@
+bin
+hostdeploy
+.idea
+.vscode
+logs
+data/*.db
+notifiers/*/data
+**node_modules
+dist*
+out
+*_bak
+conf/*
+etc/id_rsa*

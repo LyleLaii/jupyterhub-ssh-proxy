@@ -1,0 +1,22 @@
+FROM you-notebook-image
+
+RUN apt-get update &&\
+    apt-get install -y openssh-server
+# Configure SSH server
+RUN mkdir /opt/ssh &&\
+    ssh-keygen -q -N "" -t dsa -f /opt/ssh/ssh_host_dsa_key &&\
+    ssh-keygen -q -N "" -t rsa -b 4096 -f /opt/ssh/ssh_host_rsa_key &&\
+    ssh-keygen -q -N "" -t ecdsa -f /opt/ssh/ssh_host_ecdsa_key &&\
+    ssh-keygen -q -N "" -t ed25519 -f /opt/ssh/ssh_host_ed25519_key &&\
+    cp /etc/ssh/sshd_config /opt/ssh/ &&\
+    sed -ri 's/#Port 22/Port 2022/g' /opt/ssh/sshd_config &&\
+    sed -ri 's/#HostKey \/etc\/ssh/HostKey \/opt\/ssh/g' /opt/ssh/sshd_config &&\
+    sed -ri 's/#LogLevel INFO/LogLevel DEBUG3/g' /opt/ssh/sshd_config &&\
+    sed -ri 's/#PidFile \/var\/run\/sshd.pid/PidFile \/opt\/ssh\/sshd.pid/g' /opt/ssh/sshd_config &&\
+    sed -ri 's/UsePAM yes/#UsePAM yes/g' /etc/ssh/sshd_config &&\
+    chmod 600 /opt/ssh/* &&\
+    chmod 644 /opt/ssh/sshd_config &&\
+    chown -R ${NB_UID}:${NB_GID} /opt/ssh &&\
+    echo "${NB_USER}:<your password>" |chpasswd
+
+EXPOSE 2022

@@ -1,0 +1,8 @@
+host_key_path: ./etc/id_rsa
+jupyterhub:
+  url: http://127.0.0.1:6868/hub/api
+  admin_token: test
+  conn_user: username
+  conn_passwd: password
+  ssh_port: "2022"
+  verify_tls: false

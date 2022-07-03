@@ -1,0 +1,23 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  labels:
+    app: jupyterhub-ssh-proxy
+  name: jupyterhub-ssh-proxy
+  namespace: jupyter
+spec:
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: jupyterhub-ssh-proxy
+    ports:
+    - port: 2022
+      protocol: TCP
+  podSelector:
+    matchLabels:
+      app: jupyterhub
+      component: singleuser-server
+      release: jupyterhub
+  policyTypes:
+  - Ingress

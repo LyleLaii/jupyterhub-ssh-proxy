@@ -1,0 +1,8 @@
+singleuser:
+  lifecycleHooks:
+    postStart:
+      exec:
+        command:
+          - bash
+          - -c
+          - 'if command -v sshd >/dev/null 2>&1; then /usr/sbin/sshd -f /opt/ssh/sshd_config -E /tmp/sshd.log ;else echo no exists sshd ;fi'
