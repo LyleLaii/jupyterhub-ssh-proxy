@@ -31,6 +31,7 @@ jupyterhub:
 5. Create jupyterhub-ssh-proxy deployment
 
 6. Create jupyterhub-ssh-proxy service
+
 The tcp port should be used, so the TCP forwarding service should be used. NodePort is the simpleest way.
 
 7. Create token in jupyterhub.
@@ -38,4 +39,10 @@ The tcp port should be used, so the TCP forwarding service should be used. NodeP
 8. Use Jupyterhub username and token to login.
 
 
+
+- User should manually create `~/.bashrc` or change `/etc/bash.bashrc` when build image to allow load env via ssh
+- User should manually create `~/.bash_profile` or change `/etc/profile` when build image to allow load env via ssh-command
+
+
+## 
 **Thanks for https://github.com/dutchcoders/sshproxy**

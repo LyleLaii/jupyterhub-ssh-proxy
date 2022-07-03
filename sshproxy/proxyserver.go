@@ -41,9 +41,9 @@ func (s *SshProxyServer) ListenAndServe() error {
 
 		serverConf := &ssh.ServerConfig{
 			PasswordCallback: func(c ssh.ConnMetadata, pass []byte) (*ssh.Permissions, error) {
-				s.logger.Info(MODULERNAME, fmt.Sprintf("Login attempt: %s, user %s password: %s", c.RemoteAddr(), c.User(), string(pass)))
-
-				// TODO: suppert publickey
+				// s.logger.Info(MODULERNAME, fmt.Sprintf("Login attempt: %s, user %s password: %s", c.RemoteAddr(), c.User(), string(pass)))
+				s.logger.Info(MODULERNAME, fmt.Sprintf("Login attempt: %s, user %s", c.RemoteAddr(), c.User()))
+				// TODO: support publickey
 				clientConfig := &ssh.ClientConfig{User: s.jhserver.GetConnUser(),
 					Auth: []ssh.AuthMethod{
 						ssh.Password(s.jhserver.GetConnPasswd()),
