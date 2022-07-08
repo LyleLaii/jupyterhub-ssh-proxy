@@ -24,6 +24,7 @@ jupyterhub:
   admin_token: test # jupyterhub admin token to get user pod info
   conn_user: username # user pod ssh username
   conn_passwd: password # user pod ssh password
+  authorized_keys_path: '' # authorized_keys_path in user pod
   ssh_port: "2022" # user pod ssh port
   verify_tls: false
 ```
@@ -36,7 +37,7 @@ The tcp port should be used, so the TCP forwarding service should be used. NodeP
 
 7. Create token in jupyterhub.
 
-8. Use Jupyterhub username and token to login.
+8. Use Jupyterhub username and token to login. Or create a authorized_keys file in user pod. 
 
 
 

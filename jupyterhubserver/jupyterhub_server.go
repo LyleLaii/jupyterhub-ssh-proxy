@@ -2,8 +2,10 @@ package jupyterhubserver
 
 import (
 	"fmt"
+	"net"
 	"net/http"
 	"regexp"
+	"strings"
 
 	log "github.com/lylelaii/golang_utils/logger/v1"
 	requestes "github.com/lylelaii/golang_utils/requestes/v1"
@@ -13,46 +15,36 @@ import (
 const MODULENAME = "jupyterhubserver"
 
 type JupyterHubServerConfig struct {
-	Url        string `mapstructure:"url"`
-	AdminToken string `mapstructure:"admin_token"`
-	ConnUser   string `mapstructure:"conn_user"`
-	ConnPasswd string `mapstructure:"conn_passwd"`
-	SshPort    string `mapstructure:"ssh_port"`
-	VerifyTLS  bool   `mapstructure:"verify_tls"`
+	Url                string `mapstructure:"url"`
+	AdminToken         string `mapstructure:"admin_token"`
+	ConnUser           string `mapstructure:"conn_user"`
+	ConnPasswd         string `mapstructure:"conn_passwd"`
+	SshPort            string `mapstructure:"ssh_port"`
+	AuthorizedKeysPath string `mapstructure:"authorized_keys_path"`
+	VerifyTLS          bool   `mapstructure:"verify_tls"`
 }
 
 type JupyterHubServer struct {
-	url             string
-	adminToken      string
-	connUser        string
-	connPasswd      string
-	sshPort         string
-	requestesClient *requestes.RequestsClient
-	logger          log.Logger
-}
-
-type SingleUser struct {
-	username string
-	password string
-	podName  string
-	podIP    string
-	client   *ssh.Client
+	url                string
+	adminToken         string
+	connUser           string
+	connPasswd         string
+	sshPort            string
+	authorizedKeysPath string
+	requestesClient    *requestes.RequestsClient
+	logger             log.Logger
 }
 
 func NewJupyterHubServer(c JupyterHubServerConfig, logger log.Logger) *JupyterHubServer {
 	requestesClinet, _ := requestes.New(requestes.RequestsConfig{VerifyTLS: c.VerifyTLS})
 	return &JupyterHubServer{url: c.Url,
-		adminToken:      c.AdminToken,
-		connUser:        c.ConnUser,
-		connPasswd:      c.ConnPasswd,
-		sshPort:         c.SshPort,
-		requestesClient: requestesClinet,
-		logger:          logger}
-}
-
-func NewSingleUser(username string, password string, podIP string, client *ssh.Client) *SingleUser {
-	podName := fmt.Sprintf("jupyter-%s", username)
-	return &SingleUser{username: username, password: password, podName: podName, podIP: podIP, client: client}
+		adminToken:         c.AdminToken,
+		connUser:           c.ConnUser,
+		connPasswd:         c.ConnPasswd,
+		sshPort:            c.SshPort,
+		authorizedKeysPath: c.AuthorizedKeysPath,
+		requestesClient:    requestesClinet,
+		logger:             logger}
 }
 
 func (s *JupyterHubServer) GetConnUser() string {
@@ -157,18 +149,67 @@ func (s *JupyterHubServer) CheckPod(username string) string {
 	return podName
 }
 
-func (u *SingleUser) GetClient() *ssh.Client {
-	return u.client
+func (s *JupyterHubServer) GetUserAuthorizedKeys(podIP string) (map[string]bool, error) {
+	config := &ssh.ClientConfig{
+		User: s.connUser,
+		Auth: []ssh.AuthMethod{
+			ssh.Password(s.connPasswd)},
+		HostKeyCallback: func(hostname string, remote net.Addr, key ssh.PublicKey) error {
+			return nil
+		},
+	}
+	server := fmt.Sprintf("%s:%s", podIP, s.sshPort)
+	client, err := ssh.Dial("tcp", server, config)
+	if err != nil {
+		s.logger.Error(MODULENAME, fmt.Sprintf("GetUserAuthorizedKey Create Client get err: %s", err.Error()))
+		return make(map[string]bool), err
+	}
+	session, err := client.NewSession()
+	if err != nil {
+		s.logger.Error(MODULENAME, fmt.Sprintf("GetUserAuthorizedKey Create Session get err: %s", err.Error()))
+		return make(map[string]bool), err
+	}
+
+	defer session.Close()
+
+	authorizedKeysBytes, err := session.CombinedOutput(fmt.Sprintf("if [ -f %s ];then cat %s ; else echo ''; fi",
+		s.authorizedKeysPath,
+		s.authorizedKeysPath))
+	if err != nil {
+		s.logger.Error(MODULENAME, fmt.Sprintf("GetUserAuthorizedKey Run Command get err: %s", err.Error()))
+		return make(map[string]bool), err
+	}
+	s.logger.Debug(MODULENAME, fmt.Sprintf("GetUserAuthorizedKey Run Command get %s", string(authorizedKeysBytes)))
+
+	authorizedKeysMap := make(map[string]bool)
+	transAuthorizedKeys := string(authorizedKeysBytes)
+	transAuthorizedKeys = strings.Replace(transAuthorizedKeys, `\n`, "\n", -1)
+	authorizedKeysBytes = []byte(transAuthorizedKeys)
+	for len(authorizedKeysBytes) > 0 {
+		publicKey, _, _, rest, err := ssh.ParseAuthorizedKey(authorizedKeysBytes)
+		if err != nil {
+			s.logger.Error(MODULENAME, fmt.Sprintf("GetUserAuthorizedKey ParseAuthorizedKey get err: %s, origins: %s",
+				err.Error(),
+				string(authorizedKeysBytes)))
+			return authorizedKeysMap, nil
+		}
+		authorizedKeysMap[string(publicKey.Marshal())] = true
+		authorizedKeysBytes = rest
+
+	}
+	return authorizedKeysMap, nil
 }
 
-func (u *SingleUser) GetPodName() string {
-	return u.podName
-}
+func (s *JupyterHubServer) GenConnConfig() *ssh.ClientConfig {
+	clientConfig := &ssh.ClientConfig{User: s.connUser,
+		Auth: []ssh.AuthMethod{
+			ssh.Password(s.connPasswd),
+		},
+		HostKeyCallback: func(hostname string, remote net.Addr, key ssh.PublicKey) error {
+			return nil
+		},
+		BannerCallback: ssh.BannerDisplayStderr(),
+	}
 
-func (u *SingleUser) GetPodIP() string {
-	return u.podIP
-}
-
-func (u *SingleUser) UpdateClient(client *ssh.Client) {
-	u.client = client
+	return clientConfig
 }

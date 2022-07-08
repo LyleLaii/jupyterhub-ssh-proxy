@@ -28,7 +28,7 @@ func run() int {
 		listen        = kingpin.Flag("listen", "listen address. Default is :8080").Default(":8080").String()
 		cfg           = kingpin.Flag("config.file", "JupyterHub-ssh-proxy configuration file path. Default is ./etc/config.yaml").Default("./etc/config.yaml").String()
 		runMode       = kingpin.Flag(zaplogger.RunModeFlagName, zaplogger.RunModeFlagHelp).Default("release").String()
-		logLevel      = kingpin.Flag(zaplogger.LevelFlagName, zaplogger.LevelFlagHelp).Default("Info").String()
+		logLevel      = kingpin.Flag(zaplogger.LevelFlagName, zaplogger.LevelFlagHelp).Default("info").String()
 		logMaxBackups = kingpin.Flag(zaplogger.LogMaxBackupsFlagName, zaplogger.LogMaxBackupsFlagHelp).Default("5").Int()
 		logMaxDays    = kingpin.Flag(zaplogger.LogMaxDaysFlagName, zaplogger.LogMaxDaysFlagHelp).Default("30").Int()
 	)

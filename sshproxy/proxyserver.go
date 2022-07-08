@@ -43,16 +43,7 @@ func (s *SshProxyServer) ListenAndServe() error {
 			PasswordCallback: func(c ssh.ConnMetadata, pass []byte) (*ssh.Permissions, error) {
 				// s.logger.Info(MODULERNAME, fmt.Sprintf("Login attempt: %s, user %s password: %s", c.RemoteAddr(), c.User(), string(pass)))
 				s.logger.Info(MODULERNAME, fmt.Sprintf("Login attempt: %s, user %s", c.RemoteAddr(), c.User()))
-				// TODO: support publickey
-				clientConfig := &ssh.ClientConfig{User: s.jhserver.GetConnUser(),
-					Auth: []ssh.AuthMethod{
-						ssh.Password(s.jhserver.GetConnPasswd()),
-					},
-					HostKeyCallback: func(hostname string, remote net.Addr, key ssh.PublicKey) error {
-						return nil
-					},
-					BannerCallback: ssh.BannerDisplayStderr(),
-				}
+				clientConfig := s.jhserver.GenConnConfig()
 
 				if !s.jhserver.CheckUser(c.User(), string(pass)) {
 					s.logger.Warn(MODULERNAME, "CheckUser return false.")
@@ -72,10 +63,33 @@ func (s *SshProxyServer) ListenAndServe() error {
 				singleusers[c.User()].UpdateClient(client)
 				return nil, err
 			},
+			PublicKeyCallback: func(c ssh.ConnMetadata, key ssh.PublicKey) (*ssh.Permissions, error) {
+				if !singleusers[c.User()].CheckAuthorizedKey(string(key.Marshal())) {
+					s.logger.Info(MODULERNAME, fmt.Sprintf("user: %s public key check failed", c.User()))
+					return nil, fmt.Errorf("unknown public key for %q", c.User())
+				}
+				// TODO: Is there a way to directly use remote server authorized_keys?
+				clientConfig := s.jhserver.GenConnConfig()
+
+				server := singleusers[c.User()].GetPodIP()
+
+				if server == "" {
+					s.logger.Error(MODULERNAME, "Did not find User Pod")
+					return nil, fmt.Errorf("server not exist")
+				}
+
+				server = fmt.Sprintf("%s:%s", server, s.jhserver.GetSshPort())
+				s.logger.Info(MODULERNAME, fmt.Sprintf("user: %s prepare connection to %s", c.User(), server))
+				client, err := ssh.Dial("tcp", server, clientConfig)
+
+				singleusers[c.User()].UpdateClient(client)
+				return nil, err
+			},
 			BannerCallback: func(c ssh.ConnMetadata) string {
-				// podName := s.jhserver.CheckPod(c.User())
 				podIP := s.jhserver.GetPodIP(c.User())
-				singleusers[c.User()] = jupyterhubserver.NewSingleUser(c.User(), "", podIP, &ssh.Client{})
+				// TODO: error handling
+				authorizedKeysMap, _ := s.jhserver.GetUserAuthorizedKeys(podIP)
+				singleusers[c.User()] = jupyterhubserver.NewSingleUser(c.User(), "", authorizedKeysMap, podIP, &ssh.Client{})
 
 				message := "Welcome to JupyterHub SSH Client! \nNow Check Pod status... \n"
 				if podIP == "" {
