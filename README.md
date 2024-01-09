@@ -29,15 +29,19 @@ jupyterhub:
   verify_tls: false
 ```
 
-5. Create jupyterhub-ssh-proxy deployment
+5. You should manual create id_rsa file and mount it to the container, instead of execute 'RUN ssh-keygen -q -N "" -f ./etc/id_rsa' in Dockerfile.
 
-6. Create jupyterhub-ssh-proxy service
+Because every build will change this file.
+
+6. Create jupyterhub-ssh-proxy deployment
+
+7. Create jupyterhub-ssh-proxy service
 
 The tcp port should be used, so the TCP forwarding service should be used. NodePort is the simpleest way.
 
-7. Create token in jupyterhub.
+8. Create token in jupyterhub.
 
-8. Use Jupyterhub username and token to login. Or create a authorized_keys file in user pod. 
+9. Use Jupyterhub username and token to login. Or create a authorized_keys file in user pod. 
 
 
 

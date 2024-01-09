@@ -62,7 +62,7 @@ func (s *JupyterHubServer) GetSshPort() string {
 func (s *JupyterHubServer) queryUserInfo(username, password string) (bool, *UserInfo) {
 	var headers map[string]string = make(map[string]string)
 	headers["Authorization"] = fmt.Sprintf("token %s", password)
-	headers["Accept"] = "application/jupyterhub-pagination+json"
+	// headers["Accept"] = "application/jupyterhub-pagination+json"
 
 	uri := s.url + fmt.Sprintf("/users/%s", username)
 
@@ -86,6 +86,8 @@ func (s *JupyterHubServer) queryUserInfo(username, password string) (bool, *User
 		return false, &UserInfo{}
 	}
 
+	s.logger.Info(MODULENAME, fmt.Sprintf("queryUserInfo %v : %v", username, &userInfo))
+
 	return true, &userInfo
 
 }
@@ -93,7 +95,7 @@ func (s *JupyterHubServer) queryUserInfo(username, password string) (bool, *User
 func (s *JupyterHubServer) queryUserRoute(username string) *UserRoute {
 	var headers map[string]string = make(map[string]string)
 	headers["Authorization"] = fmt.Sprintf("token %s", s.adminToken)
-	headers["Accept"] = "application/jupyterhub-pagination+json"
+	// headers["Accept"] = "application/jupyterhub-pagination+json"
 
 	uri := s.url + "/proxy"
 
@@ -120,6 +122,8 @@ func (s *JupyterHubServer) queryUserRoute(username string) *UserRoute {
 	userIndex := fmt.Sprintf("/user/%s/", username)
 	r := userRoutes[userIndex]
 
+	s.logger.Debug(MODULENAME, fmt.Sprintf("queryUserRoute %v : %v", username, r))
+
 	return &r
 
 }
@@ -131,6 +135,8 @@ func (s *JupyterHubServer) GetPodIP(username string) string {
 	ipReg := `((2(5[0-5]|[0-4]\d))|[0-1]?\d{1,2})(\.((2(5[0-5]|[0-4]\d))|[0-1]?\d{1,2})){3}`
 	reg, _ := regexp.Compile(ipReg)
 	podIP := reg.Find([]byte(target))
+
+	s.logger.Debug(MODULENAME, fmt.Sprintf("GetPodIP %s : %s", username, string(podIP)))
 
 	return string(podIP)
 }
